@@ -10,7 +10,19 @@ spring:
     name: edge-service
   lifecycle:
     timeout-per-shutdown-phase: 15s
+  config:
+    import: "optional:configserver:"
   cloud:
+    config:
+      uri: http://localhost:8888
+      request-connect-timeout: 5000 # 5s
+      request-read-timeout: 5000 # 5s
+      fail-fast: false # In production, set to true
+      retry:
+        max-attempts: 6
+        initial-interval: 1000 # 1s
+        max-interval: 2000 # 2s
+        multiplier: 1.1
     httpclient:
       connect-timeout: 2000 # 2s
       response-timeout: 5s
@@ -20,6 +32,14 @@ spring:
         max-life-time: 60s # 通信通道将被关闭的时间
     gateway:
       default-filters: # 过滤器的名称
+        - SaveSession # 确保将请求转发至下游之前保存会话数据
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter:
+              replenishRate: 10 # 每秒钟放入存储桶中的令牌数量
+              burstCapacity: 20 # 允许暴增到20个请求
+              requestedTokens: 1 # 每个请求花费多少个令牌
+
         - name: Retry # 默认过滤器的列表
           args:
             retries: 3
@@ -74,7 +94,7 @@ resilience4j:
         timeoutDuration: 5s # 配置超时（秒）
 
 logging:
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{FULL} - %msg%n"
+#  pattern:
+#    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{FULL} - %msg%n"
   level:
     io.github.resilience4j: DEBUG
