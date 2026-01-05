@@ -1,16 +1,16 @@
-apiVersion: networking.k8s.io/v1 # Ingress对象的API版本
-kind: Ingress # 要创建的对象类型
+apiVersion: networking.k8s.io/v1
+kind: Ingress
 metadata:
-  name: polar-ingress # Ingress的名称
+  name: polar-ingress
 spec:
-  ingressClassName: nginx # 配置负责管理该对象的Ingress控制器
+  ingressClassName: nginx
   rules:
-    - http: # HTTP流量的Ingress规则
+    - http:
         paths:
-          - path: / # 所有请求的默认规则
+          - path: /
             pathType: Prefix
             backend:
               service:
-                name: edge-service # 要将流量转发至该Service对象
+                name: edge-service
                 port:
-                  number: 80 # 要将流量转发至该Service的端口
+                  number: 80
