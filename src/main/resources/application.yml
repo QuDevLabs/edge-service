@@ -23,62 +23,80 @@ spring:
         initial-interval: 1000 # 1s
         max-interval: 2000 # 2s
         multiplier: 1.1
-    httpclient:
-      connect-timeout: 2000 # 2s
-      response-timeout: 5s
-      pool:
-        type: elastic # 连接池类型的值可以是elastic、fixed或dsabled
-        max-idle-time: 15s # 通信通道在关闭之前的空闲时间
-        max-life-time: 60s # 通信通道将被关闭的时间
     gateway:
-      default-filters: # 过滤器的名称
-        - SaveSession # 确保将请求转发至下游之前保存会话数据
-        - name: RequestRateLimiter
-          args:
-            redis-rate-limiter:
-              replenishRate: 10 # 每秒钟放入存储桶中的令牌数量
-              burstCapacity: 20 # 允许暴增到20个请求
-              requestedTokens: 1 # 每个请求花费多少个令牌
+      server:
+        webflux:
+          httpclient:
+            connect-timeout: 2000 # 2s
+            response-timeout: 5s
+            pool:
+              type: elastic
+              max-idle-time: 15s
+              max-life-time: 60s
+          default-filters:
+            - SaveSession
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter:
+                  replenishRate: 10 # 每秒钟放入存储桶中的令牌数量
+                  burstCapacity: 20 # 允许暴增到20个请求
+                  requestedTokens: 1 # 每个请求花费多少个令牌
 
-        - name: Retry # 默认过滤器的列表
-          args:
-            retries: 3
-            methods: GET
-            series: SERVER_ERROR # 仅当
-            exceptions: java.io.IOException, java.util.concurrent.TimeoutException
-            backoff:
-              firstBackoff: 50ms
-              maxBackOff: 500ms
-              factor: 2
-              basedOnPreviousValue: false
-      routes:
-        - id: catalog-route
-          uri: ${CATALOG_SERVICE_URL:http://localhost:9001}/books/
-          predicates:
-            - Path=/books/**
-          filters:
-            - name: CircuitBreaker
+            - name: Retry # 默认过滤器的列表
               args:
-                name: catalogCircuitBreaker
-                fallbackUri: forward:/catalog-fallback # 当断路器处于打开状态时，要转发至该URI
-        - id: order-route
-          uri: ${ORDER_SERVICE_URL:http://localhost:9002}/orders/
-          predicates:
-            - Path=/orders/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: orderCircuitBreaker
-  redis:
-    connect-timeout: 2s
-    host: localhost
-    port: 6379
-    timeout: 1s
+                retries: 3
+                methods: GET
+                series: SERVER_ERROR # 仅当
+                exceptions: java.io.IOException, java.util.concurrent.TimeoutException
+                backoff:
+                  firstBackoff: 50ms
+                  maxBackOff: 500ms
+                  factor: 2
+                  basedOnPreviousValue: false
+          routes:
+            - id: spa-route
+              uri: ${SPA_URL:http://localhost:9004}
+              predicates:
+                - Path=/,/*.css,/*.js,/favicon.ico
+            - id: catalog-route
+              uri: ${CATALOG_SERVICE_URL:http://localhost:9001}/books/
+              predicates:
+                - Path=/books/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: catalogCircuitBreaker
+                    fallbackUri: forward:/catalog-fallback # 当断路器处于打开状态时，要转发至该URI
+            - id: order-route
+              uri: ${ORDER_SERVICE_URL:http://localhost:9002}/orders/
+              predicates:
+                - Path=/orders/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: orderCircuitBreaker
+  data:
+    redis:
+      connect-timeout: 2s
+      host: localhost
+      port: 6379
+      timeout: 1s
   session:
     store-type: redis
     timeout: 10m
     redis:
       namespace: polar:edge
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak: # 在Spring Security中识别客户端注册名称(叫做registrationId）。它可以是任意的字符串
+            client-id: edge-service # Keycloak中所定义的OAuth2客户端标识符
+            client-secret: polar-keycloak-secret # 客户端用来与Keycloak进行认证的共享Secret
+            scope: openid # 客户端希望能够访问的scope列表。 openid scope会在OAuth2之上触发OIDC认证
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:8080/realms/PolarBookshop
 
 resilience4j:
   circuitbreaker:
@@ -93,8 +111,6 @@ resilience4j:
       default: # 适用于所有限时器的默认配置
         timeoutDuration: 5s # 配置超时（秒）
 
-logging:
-#  pattern:
-#    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{FULL} - %msg%n"
-  level:
-    io.github.resilience4j: DEBUG
+#logging:
+#  level:
+#    io.github.resilience4j: DEBUG
