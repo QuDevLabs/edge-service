@@ -35,6 +35,7 @@ spring:
               max-life-time: 60s
           default-filters:
             - SaveSession
+            - TokenRelay # 当调用下游服务时，启动访问令牌的传播
             - name: RequestRateLimiter
               args:
                 redis-rate-limiter:
@@ -93,7 +94,7 @@ spring:
           keycloak: # 在Spring Security中识别客户端注册名称(叫做registrationId）。它可以是任意的字符串
             client-id: edge-service # Keycloak中所定义的OAuth2客户端标识符
             client-secret: polar-keycloak-secret # 客户端用来与Keycloak进行认证的共享Secret
-            scope: openid # 客户端希望能够访问的scope列表。 openid scope会在OAuth2之上触发OIDC认证
+            scope: openid,roles # 客户端希望能够访问的scope列表。 openid scope会在OAuth2之上触发OIDC认证
         provider:
           keycloak:
             issuer-uri: http://localhost:8080/realms/PolarBookshop
