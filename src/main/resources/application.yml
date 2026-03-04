@@ -112,6 +112,23 @@ resilience4j:
       default: # 适用于所有限时器的默认配置
         timeoutDuration: 5s # 配置超时（秒）
 
-#logging:
-#  level:
-#    io.github.resilience4j: DEBUG
+logging:
+  group:
+    circuitbreaker: io.github.resilience4j, org.springframework.cloud.circuitbreaker
+  level:
+    circuitbreaker: info
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,redis # 就绪探针将会组合考虑应用的就绪状态以及Redis的可用性
