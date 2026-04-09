@@ -20,42 +20,43 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import(SecurityConfig.class)
 class UserControllerTests {
 
-	@Autowired
-	WebTestClient webClient;
+    @Autowired
+    WebTestClient webClient;
 
-	@MockitoBean
-	ReactiveClientRegistrationRepository clientRegistrationRepository;
+    @MockitoBean
+    ReactiveClientRegistrationRepository clientRegistrationRepository;
 
-	@Test
-	void whenNotAuthenticatedThen401() {
-		webClient
-				.get()
-				.uri("/user")
-				.exchange()
-				.expectStatus().isUnauthorized();
-	}
+    @Test
+    void whenNotAuthenticatedThen401() {
+        webClient
+                .get()
+                .uri("/user")
+                .exchange()
+                .expectStatus().isUnauthorized();
+    }
 
-	@Test
-	void whenAuthenticatedThenReturnUser() {
-		var expectedUser = new User("jon.snow", "Jon", "Snow", List.of("employee", "customer"));
+    @Test
+    void whenAuthenticatedThenReturnUser() {
+        var expectedUser = new User("jon.snow", "Jon", "Snow", List.of("employee", "customer"));
 
-		webClient
-				.mutateWith(configureMockOidcLogin(expectedUser))
-				.get()
-				.uri("/user")
-				.exchange()
-				.expectStatus().is2xxSuccessful()
-				.expectBody(User.class)
-				.value(user -> assertThat(user).isEqualTo(expectedUser));
-	}
+        webClient
+                .mutateWith(configureMockOidcLogin(expectedUser))
+                .get()
+                .uri("/user")
+                .exchange()
+                .expectStatus().is2xxSuccessful()
+                .expectBody(User.class)
+                .value(user -> assertThat(user).isEqualTo(expectedUser));
+    }
 
-	private SecurityMockServerConfigurers.OidcLoginMutator configureMockOidcLogin(User expectedUser) {
-		return SecurityMockServerConfigurers.mockOidcLogin().idToken(builder -> {
-			builder.claim(StandardClaimNames.PREFERRED_USERNAME, expectedUser.username());
-			builder.claim(StandardClaimNames.GIVEN_NAME, expectedUser.firstName());
-			builder.claim(StandardClaimNames.FAMILY_NAME, expectedUser.lastName());
-			builder.claim("roles", expectedUser.roles());
-		});
-	}
+    private SecurityMockServerConfigurers.OidcLoginMutator configureMockOidcLogin(User expectedUser) {
+        return SecurityMockServerConfigurers.mockOidcLogin().idToken(
+                builder -> { // 构建mock ID令牌
+                    builder.claim(StandardClaimNames.PREFERRED_USERNAME, expectedUser.username());
+                    builder.claim(StandardClaimNames.GIVEN_NAME, expectedUser.firstName());
+                    builder.claim(StandardClaimNames.FAMILY_NAME, expectedUser.lastName());
+                    builder.claim("roles", expectedUser.roles());
+                });
+    }
 
 }

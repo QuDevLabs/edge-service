@@ -14,7 +14,7 @@ spring:
     import: "optional:configserver:"
   cloud:
     config:
-      uri: http://localhost:8888
+      uri: ${SPRING_CLOUD_CONFIG_URI:http://localhost:8888}
       request-connect-timeout: 5000 # 5s
       request-read-timeout: 5000 # 5s
       fail-fast: false # In production, set to true
@@ -30,11 +30,11 @@ spring:
             connect-timeout: 2000 # 2s
             response-timeout: 5s
             pool:
-              type: elastic
-              max-idle-time: 15s
-              max-life-time: 60s
+              type: elastic # 连接池类型，elastic表示根据需要创建连接，并在空闲时关闭连接; fixed表示固定大小的连接池; disable表示禁用连接池
+              max-idle-time: 15s # 连接在被认为是空闲之前可以保持的最长时间
+              max-life-time: 60s # 连接在被认为是过期之前可以保持的最长时间
           default-filters:
-            - SaveSession
+            - SaveSession # 确保将请求转发至下游之前，保存会话数据
             - TokenRelay # 当调用下游服务时，启动访问令牌的传播
             - name: RequestRateLimiter
               args:
@@ -45,11 +45,11 @@ spring:
 
             - name: Retry # 默认过滤器的列表
               args:
-                retries: 3
-                methods: GET
-                series: SERVER_ERROR # 仅当
-                exceptions: java.io.IOException, java.util.concurrent.TimeoutException
-                backoff:
+                retries: 3 # 最大重试次数
+                methods: GET # 仅当HTTP方法为GET时才重试
+                series: SERVER_ERROR # 仅当服务器返回5xx错误时才重试
+                exceptions: java.io.IOException, java.util.concurrent.TimeoutException # 仅当抛出这些异常时才重试
+                backoff: # 重试的退避策略配置 重试延迟是通过firstBackoff * (factor ^ n)计算的
                   firstBackoff: 50ms
                   maxBackOff: 500ms
                   factor: 2
@@ -63,10 +63,10 @@ spring:
               uri: ${CATALOG_SERVICE_URL:http://localhost:9001}/books/
               predicates:
                 - Path=/books/**
-              filters:
-                - name: CircuitBreaker
+              filters: # 断路器过滤器配置
+                - name: CircuitBreaker # 断路器过滤器的名称
                   args:
-                    name: catalogCircuitBreaker
+                    name: catalogCircuitBreaker # 断路器实例的名称
                     fallbackUri: forward:/catalog-fallback # 当断路器处于打开状态时，要转发至该URI
             - id: order-route
               uri: ${ORDER_SERVICE_URL:http://localhost:9002}/orders/
@@ -96,8 +96,8 @@ spring:
             client-secret: polar-keycloak-secret # 客户端用来与Keycloak进行认证的共享Secret
             scope: openid,roles # 客户端希望能够访问的scope列表。 openid scope会在OAuth2之上触发OIDC认证
         provider:
-          keycloak:
-            issuer-uri: http://localhost:8080/realms/PolarBookshop
+          keycloak: # 在Spring Security中识别OAuth2提供者的名称(叫做providerId）。它可以是任意的字符串，但通常与registrationId相同以保持一致性
+            issuer-uri: http://localhost:8080/realms/PolarBookshop # Keycloak服务器上所配置的Realm的URL。Spring Security将使用这个URL来发现Keycloak的认证端点和公钥等信息
 
 resilience4j:
   circuitbreaker:
@@ -117,12 +117,17 @@ logging:
     circuitbreaker: io.github.resilience4j, org.springframework.cloud.circuitbreaker
   level:
     circuitbreaker: info
+  pattern:
+    level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"
+
+info:
+  system: Polar Bookshop
 
 management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: configprops, env, gateway, health, heapdump, info, loggers, mappings, prometheus
   endpoint:
     health:
       show-details: always
@@ -132,3 +137,13 @@ management:
       group:
         readiness:
           include: readinessState,redis # 就绪探针将会组合考虑应用的就绪状态以及Redis的可用性
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: true
+    os:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

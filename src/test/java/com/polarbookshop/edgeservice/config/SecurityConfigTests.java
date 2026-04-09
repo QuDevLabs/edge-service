@@ -55,7 +55,7 @@ class SecurityConfigTests {
 				.post()
 				.uri("/logout")
 				.exchange()
-				.expectStatus().isFound();
+				.expectStatus().isFound(); // 响应是对Keycloak的重定向，以传播退出操作
 	}
 
 	private ClientRegistration testClientRegistration() {

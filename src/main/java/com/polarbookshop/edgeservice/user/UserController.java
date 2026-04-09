@@ -11,21 +11,6 @@ import java.util.List;
 @RestController
 public class UserController {
 
-//    @GetMapping("user")
-//    public Mono<User> getUser() {
-//        return ReactiveSecurityContextHolder.getContext()
-//                .map(SecurityContext::getAuthentication)
-//                .map(authentication ->
-//                        (OidcUser) authentication.getPrincipal())
-//                .map(oidcUser ->
-//                        new User(oidcUser.getPreferredUsername(),
-//                                oidcUser.getGivenName(),
-//                                oidcUser.getFamilyName(),
-//                                List.of("employee", "customer")
-//                        )
-//                );
-//    }
-
     @GetMapping("user")
     public Mono<User> getUser(
             @AuthenticationPrincipal OidcUser oidcUser

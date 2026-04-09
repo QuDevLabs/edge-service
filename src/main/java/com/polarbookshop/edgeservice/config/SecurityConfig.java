@@ -33,9 +33,9 @@ public class SecurityConfig {
                                                      ReactiveClientRegistrationRepository clientRegistrationRepository) {
         return http.authorizeExchange(exchange -> exchange
                         .pathMatchers("/actuator/**").permitAll()
-                        .pathMatchers("/", "/*.css", "/*.js", "/favicon.ico").permitAll()
-                        .pathMatchers(HttpMethod.GET, "/books/**").permitAll()
-                        .anyExchange().authenticated()) // 所有的请求都需要认证
+                        .pathMatchers("/", "/*.css", "/*.js", "/favicon.ico").permitAll() // 允许对SPA静态资源进行未认证访问
+                        .pathMatchers(HttpMethod.GET, "/books/**").permitAll() // 允许对目录中的图书进行未认证访问
+                        .anyExchange().authenticated()) // 任何其他请求都需要认证
 //                .formLogin(Customizer.withDefaults()) // 通过登录表单启用用户认证
                 .exceptionHandling(exceptionHandling ->
                         exceptionHandling.authenticationEntryPoint(new HttpStatusServerEntryPoint(HttpStatus.UNAUTHORIZED))) // 当因为用户没有认证而抛出异常时，将会返回HTTP 401响应
